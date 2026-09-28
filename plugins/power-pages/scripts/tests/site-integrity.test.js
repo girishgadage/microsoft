@@ -22,8 +22,16 @@ const {
 const CLI_PATH = path.join(__dirname, '..', 'validate-site-integrity.js');
 
 test('parses an optional project root without consuming other options', () => {
-  assert.deepEqual(parseArgs([]), {});
+  assert.deepEqual(parseArgs([]), { skipLocalization: false });
   assert.equal(parseArgs(['--projectRoot', '.']).projectRoot, path.resolve('.'));
+  assert.equal(
+    parseArgs(['--skip-localization']).skipLocalization,
+    true
+  );
+  assert.throws(
+    () => parseArgs(['--skip-localization', '--skip-localization']),
+    /may be specified only once/
+  );
   assert.throws(
     () => parseArgs(['--projectRoot']),
     /"--projectRoot" requires a value/
@@ -63,6 +71,32 @@ function runtimeIndex() {
   return "import i18next from 'i18next'; i18next.init({ fallbackLng: 'en-US' });\n" +
     "import { isLocaleAvailable } from './localeAvailability';\n" +
     "export const selectorLocales = ['en-US', 'ar-SA'].filter(isLocaleAvailable);\n";
+}
+
+function verifiedReactPackage(projectRoot) {
+  const artifact = {
+    version: '16.0.0',
+    registry: 'https://registry.npmjs.org/',
+    tarballUrl:
+      'https://registry.npmjs.org/react-i18next/-/react-i18next-16.0.0.tgz',
+    integrity: 'sha512-dGVzdA==',
+  };
+  writeProjectFile(projectRoot, 'package-lock.json', JSON.stringify({
+    packages: {
+      'node_modules/react-i18next': {
+        version: artifact.version,
+        resolved: artifact.tarballUrl,
+        integrity: artifact.integrity,
+      },
+    },
+  }));
+  return {
+    status: 'verified',
+    source: 'known-capability',
+    license: 'MIT',
+    licenseReview: { status: 'automatically-accepted' },
+    artifact,
+  };
 }
 
 test('defers exact recorded static bidi blockers but not unsafe or changed findings', () => {
@@ -250,7 +284,7 @@ test('defers known bidi blockers while affected locales remain unavailable', (t)
     mode: 'runtime',
     packageName: 'react-i18next',
     packageVersion: '^16.0.0',
-    packageVerification: { status: 'verified', source: 'known-capability' },
+    packageVerification: verifiedReactPackage(projectRoot),
     locales: ['en-US', 'ar-SA'],
     defaultLocale: 'en-US',
     translationMethod: 'agent',
@@ -342,7 +376,7 @@ test('pending remediation still blocks newly introduced bidi defects', (t) => {
     mode: 'runtime',
     packageName: 'react-i18next',
     packageVersion: '^16.0.0',
-    packageVerification: { status: 'verified', source: 'known-capability' },
+    packageVerification: verifiedReactPackage(projectRoot),
     locales: ['en-US', 'ar-SA'],
     defaultLocale: 'en-US',
     translationMethod: 'agent',
@@ -421,7 +455,7 @@ test('one recorded finding cannot defer a second same-line declaration', (t) => 
     mode: 'runtime',
     packageName: 'react-i18next',
     packageVersion: '^16.0.0',
-    packageVerification: { status: 'verified', source: 'known-capability' },
+    packageVerification: verifiedReactPackage(projectRoot),
     locales: ['en-US', 'ar-SA'],
     defaultLocale: 'en-US',
     translationMethod: 'agent',
