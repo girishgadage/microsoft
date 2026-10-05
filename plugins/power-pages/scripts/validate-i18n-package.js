@@ -12,6 +12,7 @@ const {
   LOCALIZATION_CAPABILITIES,
   MAX_MODE_EVIDENCE_ENTRIES,
   resolveProjectRelativePath,
+  getLocalizationModeAvailability,
 } = require('./lib/localization-config');
 const { detectFramework } = require('./lib/framework-detection');
 const {
@@ -567,6 +568,16 @@ function selectFramework(detection, requestedFramework) {
   return null;
 }
 
+function validateRequestedMode(framework, mode) {
+  const availability = getLocalizationModeAvailability(framework, mode);
+  if (!availability.available) {
+    const error = new Error(availability.reason);
+    error.code = availability.reasonCode;
+    throw error;
+  }
+  return availability;
+}
+
 function evaluatePackage(metadata, options) {
   const { packageName, framework, frameworkVersion, mode, now = new Date() } = options;
   const version = metadata.version;
@@ -912,6 +923,7 @@ async function runCli() {
       'Cannot validate package because the selected framework is not supported by project evidence.'
     );
   }
+  validateRequestedMode(framework, args.mode);
   const frameworkPeers =
     LOCALIZATION_CAPABILITIES.frameworks[framework]?.frameworkPeers || [];
   const frameworkDependency = frameworkPeers[0];
@@ -1092,4 +1104,5 @@ module.exports = {
   resolvePackage,
   selectFramework,
   validateModeEvidenceClassification,
+  validateRequestedMode,
 };
