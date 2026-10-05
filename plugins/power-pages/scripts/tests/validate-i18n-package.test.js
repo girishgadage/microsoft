@@ -2,6 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const path = require('node:path');
 
 const {
   assessModeSupport,
@@ -10,6 +11,7 @@ const {
   fetchText,
   isPublicIpAddress,
   packageSupportsFramework,
+  parseTelemetryErrorContext,
   peerRangeAllowsMajor,
   resolveInstalledVersion,
   resolvePublicHostname,
@@ -49,6 +51,36 @@ function evaluationOptions(overrides = {}) {
   };
 }
 
+test('requires complete, usable context before emitting error telemetry', () => {
+  assert.equal(parseTelemetryErrorContext([]), null);
+  assert.equal(
+    parseTelemetryErrorContext([
+      '--projectRoot', '--package',
+      '--mode', 'runtime',
+    ]),
+    null
+  );
+  assert.equal(
+    parseTelemetryErrorContext([
+      '--projectRoot', '.',
+      '--package', 'react-i18next',
+    ]),
+    null
+  );
+  assert.deepEqual(
+    parseTelemetryErrorContext([
+      '--projectRoot', '.',
+      '--package', 'react-i18next',
+      '--mode', 'runtime',
+    ]),
+    {
+      projectRoot: path.resolve('.'),
+      package: 'react-i18next',
+      mode: 'runtime',
+    }
+  );
+});
+
 test('accepts a stable, maintained, compatible runtime package', () => {
   const result = evaluatePackage(metadata(), evaluationOptions());
 
@@ -75,6 +107,7 @@ test('rejects prereleases without explicit confirmation', () => {
 
   assert.equal(result.viable, false);
   assert.match(result.failures.join('\n'), /prerelease/);
+  assert.deepEqual(result.failureCodes, ['prerelease-not-approved']);
 });
 
 test('reports license review alongside hard package failures', () => {
@@ -173,6 +206,7 @@ test('requires mode evidence for unknown alternatives', () => {
   assert.equal(result.requiresConfirmation, true);
   assert.equal(result.modeEvidence.classificationRequired, true);
   assert.equal(result.failures.length, 0);
+  assert.deepEqual(result.failureCodes, ['mode-inconclusive']);
   assert.match(result.warnings.join('\n'), /requires agent classification/);
 });
 
