@@ -1455,8 +1455,7 @@ prove that the requested outcome occurred.
     validation. When `OnChange` stages the amount, apply these same checks to the source
     input and confirm the gate rejects its current/staged invalid value.
     Accept either explicit non-positive form supported by the acceptance contract:
-    `value <= 0` or `Not(value > 0)`. Do not require a syntactic spelling the validator
-    rejects.
+    `value <= 0` or `Not(value > 0)`. Do not require a third unsupported form.
 12. Trace the current selected operation into the mutation formula. Reject a hard-coded
     default direction, a stale variable from an earlier interaction, or a toggle that
     infers the requested direction from prior state.
@@ -1505,7 +1504,7 @@ prove that the requested outcome occurred.
     `cmbItem.Selected.ID`); when a staging variable is used instead, its `Set(...)` or
     `UpdateContext({...})` assignment from the corresponding input control must be present
     and reachable before the mutation consumes it, not only its initialization seed.
-    `validate-canvas-acceptance.cs` enforces this bounded static provenance for directional
+    This bounded static provenance is required for directional
     receipt old/amount operands; that liveness check does not establish that a staged
     amount is valid, so separately inspect its `Default`, `Min`, current-value gate, and
     reset behavior.
@@ -1804,10 +1803,9 @@ suffix, casing change, padding, or reshaping applied to either side
 plan genuinely stores the key in that transformed form. A concatenated or reshaped key is a
 **phantom LookUp key**: it can never equal any stored key, so `LookUp`/`Filter` returns
 `Blank()`/empty and the `Patch` silently creates nothing or targets no row while the formula
-still compiles. The acceptance validator now rejects the most common shape of this defect —
+still compiles. Manual inspection must reject the most common shape of this defect —
 a directional-mutation key that appends a string-concat or arithmetic operator directly to
-the selected-record expression (`... = cmbItem.Selected.ID & " ID"`) — so it no longer slips
-past the directional and selected-ID checks. It does **not** model every reshaping: a prefix
+the selected-record expression (`... = cmbItem.Selected.ID & " ID"`). A prefix
 wrap (`"ITEM-" & cmbItem.Selected.ID`), a function reshape (`Left(...)`, `Trim(...)`,
 `Upper(...)`), or the same surgery inside a `Remove`/`UpdateIf`/`Filter` or connector
 mutation still compiles cleanly. Confirm by
